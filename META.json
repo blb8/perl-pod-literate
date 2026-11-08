@@ -1,6 +1,6 @@
 {
 	"version" : "0.0.1",
-	"name"    : "Perl-Pod-Literate",
+	"name"    : "Pod-Literate",
 	"author"  : ["Brian Blackmore <BBLACKM@cpan.org>"],
 	"abstract": "Literate programming in POD",
 	"license" : ["perl_5"],

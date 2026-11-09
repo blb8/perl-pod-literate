@@ -87,7 +87,24 @@ Some text.
 =begin literate $tfn
 
 	#< Header >#
+	#< Inline conditional >#
 	#< Say something in2resting >#
+
+=end literate
+
+The conditional will check inline behavior.
+
+=for literate Inline conditional
+
+	if(#< Fifty percent chance >#) { print "Greetings!\\n" }
+
+=for literate .
+
+This will be true fifty percent of the time.
+
+=begin literate Fifty percent chance
+
+	rand()>0.5
 
 =end literate
 
@@ -104,6 +121,7 @@ Some text.
 	is($result,
 q|#!/usr/bin/perl
 use strict; use warnings;
+if(rand()>0.5) { print "Greetings!\n" }
 print "Hello world!\n";|,'Generated script');
 };
 

@@ -319,9 +319,9 @@ The C<target:filename> can simmply set the output and all subsequent sections wi
 
 =item done First line indentation applies to every line in the reference
 
-=item todo Inline references
+=item done Inline references
 
-Most work has been focused on standalone references.  What is the behavior of C<{ named reference }> when the reference is a single line?  Multiline?
+A reference within a line is handled correctly.  C<if(#E<lt> ref E<gt>#)> expands properly if C<ref> is a single line, with no additional spaces.  If ref is a multiline, it's still inserted at that spot, with its inner newlines, but with no terminal newline.
 
 =item todo Inline declaration
 

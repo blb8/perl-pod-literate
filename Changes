@@ -1,5 +1,9 @@
 Revision history for Pod::Literate
 
+0.0.3 - 2026-..-..
+	- Verify inline references
+	- Fix Pod::Simple expected version
+
 0.0.2 - 2026-11-08
 	- Build fix
 

@@ -74,6 +74,7 @@ sub indent {
 sub _handle_element_start {
 	my ($self,$element,$attribute)=@_;
 	my $target=$$attribute{target}//'';
+	if($target eq ':literate') { die 'Non-data paragraphs are not currently supported via ":literate"' }
 	if($target ne 'literate') { return }
 	if(my $name=$self->target()) {
 		$self->sectionAppend($name, $self->collected());
@@ -231,7 +232,7 @@ Unused sections may become failures, warnings, etc.
 
 =item Commands
 
-Commands like C<literate target:name> might change.  Considering C<:literate> for these.
+Commands will likely migrate to the following syntax:  C<=for literate:command target=name> or similar.
 
 =item Weave
 
@@ -308,7 +309,7 @@ The names are clear within the specification, but the generated POD doesn't cont
 
 Basic functionality is provided in C<weave>, but functionality is still being decided.
 
-=item todo Support C<=for literate import:filename>
+=item todo Support C<=for literate:command import=filename>
 
 Documents may appear in sections, and one large POD can become difficult to manage.  With a specialized weave command, it would be sensible to support imports.
 
@@ -330,7 +331,9 @@ Support for C<XE<lt>nameE<gt>code> to declare single lines of code within a para
 
 =item todo Detect/reject invalid sequences like begin/for, begin/begin, for title/for title
 
-=item todo Investigate colon-prefixed C<=for :literate command> for the command strings.
+=item done Investigate colon-prefixed C<=for :literate command> for the command strings.
+
+These are now explicitly rejected.  These are meant to denote plain/POD paragraphs according to L<perlpodspec>, which will require additional parsers.  This syntax may be used to emit POD into the tangled result in the future.
 
 =item todo Blank code lines
 
@@ -344,7 +347,7 @@ Lexicographic index of all section names etc.  (Page numbers seem irrelevant, is
 
 =item todo Module pod
 
-How to denote pod that belongs with the output module?
+How to denote pod that belongs with the output module?  This may be supported via the C<:literate> format identifier.
 
 =item todo Tests
 

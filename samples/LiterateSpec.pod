@@ -320,6 +320,7 @@ A subclass of L<Pod::Simple> must implement handlers for the start and end of co
 	sub _handle_element_start {
 		my ($self,$element,$attribute)=@_;
 		my $target=$$attribute{target}//'';
+		#< Fail for non-data paragraphs >#
 		if($target ne 'literate') { return }
 		#< Handle a start element >#
 	}
@@ -402,8 +403,6 @@ When the end element is reached, the section can be populated.
 
 =for literate .
 
-=head3 End elements
-
 =head3 Text collection
 
 The only task to perform when basic text is read is to populate the collector.
@@ -411,6 +410,16 @@ The only task to perform when basic text is read is to populate the collector.
 =for literate Handle a text element
 
 	if(defined($$self{$cache}{collector})) { $$self{$cache}{collector}.=$text."\n" }
+
+=for literate .
+
+=head3 Data paragraphs
+
+At this time, only data paragraphs are supported in C<=begin> and C<=for> blocks.  A non-data paragraph, that is a "plain paragraph", may contain normal POD commands and additional plain documentation.  Only data/code paragraphs are supported at this point.  In the future, the C<:literate> type might be used to support embedding actual POD in the result, but this requires additional parsing/handling not yet available.  If it is encountered, fail:
+
+=for literate Fail for non-data paragraphs
+
+	if($target eq ':literate') { die 'Non-data paragraphs are not currently supported via ":literate"' }
 
 =for literate .
 

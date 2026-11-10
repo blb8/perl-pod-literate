@@ -82,7 +82,7 @@ sub _handle_element_start {
 	}
 	if($element eq 'for') {
 		$$self{$cache}{mode}=$$attribute{'~really'};
-		if($$attribute{title}) { $self->targetSet($$attribute{title}=~s/^\+//r) }
+		if($$attribute{title}) { my $s=$$attribute{title}; $s=~s/^\+//; $self->targetSet($s) }
 		$self->initCollection();
 	}
 }
@@ -100,7 +100,8 @@ sub _handle_element_end {
 			$self->clearCollection();
 		}
 		elsif($mode eq '=for') {
-			$self->targetSet($collected=~s/^\+//r);
+			my $s=$collected; $s=~s/^\+//;
+			$self->targetSet($s);
 			$self->initCollection();
 		}
 		elsif($self->target()) {

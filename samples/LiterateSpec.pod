@@ -76,7 +76,7 @@ When processing the start of these blocks, a title attribute is set with the "De
 
 =for literate Set target from begin
 
-	if($$attribute{title}) { $self->targetSet($$attribute{title}=~s/^\+//r) }
+	if($$attribute{title}) { my $s=$$attribute{title}; $s=~s/^\+//; $self->targetSet($s) }
 	$self->initCollection();
 
 =for literate .
@@ -119,7 +119,8 @@ The C<for> paragraph behaves slightly differently from begin/end.  In the case o
 
 =for literate Set target from for
 
-	$self->targetSet($collected=~s/^\+//r);
+	my $s=$collected; $s=~s/^\+//;
+	$self->targetSet($s);
 	$self->initCollection();
 
 =for literate .

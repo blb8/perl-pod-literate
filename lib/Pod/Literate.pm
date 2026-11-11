@@ -1,6 +1,6 @@
 package Pod::Literate;
 use parent 'Pod::Simple';
-our $VERSION='0.0.2';
+our $VERSION='0.0.3';
 use strict;
 use warnings;
 my $cache='--PODLITERATECACHE--';
@@ -202,7 +202,7 @@ Pod::Literate - Literate programming through POD, for general applications or sp
 
 =head1 VERSION
 
-Version 0.0.2
+Version 0.0.3
 
 =head1 SYNOPSIS
 

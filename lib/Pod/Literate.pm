@@ -12,7 +12,7 @@ sub new {
 	my $self=$class->SUPER::new();
 	if(exists($$self{$cache})) { die 'Basic Pod::Simple object unexpectedly contains the Pod::Literate cache key' }
 	$$self{$cache}={
-		ofn      =>{},    # the output filename for the tangled application
+		ofn      =>[],    # the output filenames for the tangled application
 		section  =>{},    # the collection of named sections
 		mode     =>'',    # scanning mode, to distinguish begin/for tags
 		target   =>undef, # defined and destroyed while scanning
@@ -95,12 +95,12 @@ sub _handle_element_end {
 		my ($mode,$collected)=@{$$self{$cache}}{qw/mode collector/};
 		$collected=~s/\n$//s;
 		if(($mode eq 'command')&&($collected=~/^target=(.+)$/)) {
-			$$self{$cache}{ofn}=$1;
+			push @{$$self{$cache}{ofn}},$1;
 			$self->clearCollection();
 		}
 		elsif(($mode eq '=for')&&($collected=~/^target:(.+)$/)) {
 			print STDERR "=for literate target: is deprecated; use =for literate:command\n";
-			$$self{$cache}{ofn}=$1;
+			push @{$$self{$cache}{ofn}},$1;
 			$self->clearCollection();
 		}
 		elsif(($mode eq '=for')&&($collected eq '.')) {
@@ -136,7 +136,7 @@ sub tangle {
 		foreach my $name (values %tobuild) { delete(@$name{@names}) }
 	}
 	foreach my $name (@todo) { $self->tangleSection($name) }
-	if(my $ofn=$$self{$cache}{ofn}) {
+	foreach my $ofn (@{$$self{$cache}{ofn}}) {
 	if(my $oft=$self->section($ofn)) {
 		open(my $fh,'>',$ofn) or die "open: $!";
 		print $fh $oft;
@@ -228,17 +228,9 @@ I<IMPORTANT>:  This is an early version.  Monitor the version change logs for ad
 
 The warning/error behavior of C<literate Name> versus C<literate +Name> may change, be dependent on commandline flags, etc.
 
-=item Hidden sections
-
-When I<weave> is provided, both of C<begin> and C<for> sections will become visible.  There may be some benefit to having hidden sections that still generate code.
-
 =item Unused sections
 
 Unused sections may become failures, warnings, etc.
-
-=item Commands
-
-Commands will likely migrate to the following syntax:  C<=for literate:command target=name> or similar.
 
 =item Weave
 
@@ -294,13 +286,15 @@ Leading and trailing spaces are ignored, but otherwise only the sequence C<E<gt>
 
 =head1 OUTPUT
 
-At this time, a single output file is supported per specification:
+An output filename may be specified via
 
   =for literate:command target=Module.pm
 
-Relative and full path specifications are permitted.  (Expect this to support multiple file output in the future).
+Multiple targets may be specified by repeating the command, once for each output file.  Each target C<filename> must have a defined section C<=begin literate filename> or C<=for literate filename>.  Relative and full path specifications are permitted.
 
-The previous syntax will be deprecated:  C<=for literate target:Module.pm>
+Note that the weave command still produces single-file output and does not split documentation into multiple files.
+
+The old syntax will be deprecated:  C<=for literate target:Module.pm>
 
 =head1 TODO
 
@@ -321,9 +315,9 @@ Basic functionality is provided in C<weave>, but functionality is still being de
 
 Documents may appear in sections, and one large POD can become difficult to manage.  With a specialized weave command, it would be sensible to support imports.
 
-=item todo Handle multiple output filenames
+=item done Handle multiple output filenames
 
-The C<target=filename> can simmply set the output and all subsequent sections will be collected therein.  If another filename is encountered, the scanner will start putting sections there.  With an C<import> statement, the filenames would be fairly well scoped, and perhaps C<import> should explicitly scope any set filename.
+Multiple C<target=filename> calls can be made.
 
 =item done First line indentation is removed, to match indentation at the point of reference
 

@@ -271,22 +271,22 @@ The output filename is chosen by specifying the target filename in a C<=for> com
 =for literate Handle tangle target
 
 	if(($mode eq 'command')&&($collected=~/^target=(.+)$/)) {
-		$$self{$cache}{ofn}=$1;
+		push @{$$self{$cache}{ofn}},$1;
 		$self->clearCollection();
 	}
 	elsif(($mode eq '=for')&&($collected=~/^target:(.+)$/)) {
 		print STDERR "=for literate target: is deprecated; use =for literate:command\n";
-		$$self{$cache}{ofn}=$1;
+		push @{$$self{$cache}{ofn}},$1;
 		$self->clearCollection();
 	}
 
 =for literate .
 
-As the output filename is itself a named section, creating the output file is a simple matter of writing that section.
+An output filename is itself a named section, so creating the output file is a simple matter of writing that section.  Moreover, multiple targets may be specified to write multiple files.
 
 =for literate Write the output file
 
-	if(my $ofn=$$self{$cache}{ofn}) {
+	foreach my $ofn (@{$$self{$cache}{ofn}}) {
 	if(my $oft=$self->section($ofn)) {
 		open(my $fh,'>',$ofn) or die "open: $!";
 		print $fh $oft;
@@ -460,7 +460,7 @@ It is checked during initialization just in case:
 
 	if(exists($$self{$cache})) { die 'Basic Pod::Simple object unexpectedly contains the Pod::Literate cache key' }
 	$$self{$cache}={
-		ofn      =>{},    # the output filename for the tangled application
+		ofn      =>[],    # the output filenames for the tangled application
 		section  =>{},    # the collection of named sections
 		mode     =>'',    # scanning mode, to distinguish begin/for tags
 		target   =>undef, # defined and destroyed while scanning
@@ -636,6 +636,104 @@ The element end C<attr> does contain really=for, but no information during the e
 
 =end NOTE
 
+=head1 SCRIPTS
+
+=head2 Tangle
+
+A straightforward script provides for parsing files containing C<literate> format specifiers.
+
+=for literate:command target=podtangle.pl
+
+=begin literate podtangle.pl
+
+	#< Perl script header >#
+	use Pod::Literate;
+	## No options at this time
+	#< Tangle from file >#
+	1;
+
+=end literate
+
+As L<Pod::Literate> extends L<Pod::Simple>, it is straightforward to declare acceptable format names and pass to the existing file parser.
+
+=begin literate Tangle from file
+
+	my $parser=Pod::Literate->new();
+	$parser->accept_targets('literate','literate:command');
+	$parser->expand_verbatim_tabs(0);
+	$parser->parse_from_file(shift(@ARGV));
+
+=end literate
+
+=head2 Weave
+
+A more complex C<weave> command may be provided in the future.  At this time, however, it is a simple matter to strip any unneeded literate format specifiers and include titling for named sections.
+
+=for literate:command target=podweave.pl
+
+=begin literate podweave.pl
+
+	#< Perl script header >#
+	my ($title);
+	while(<>) {
+		if(0) { 1 }
+		#< Weave ignores target commands >#
+		#< Weave ignores ending commands >#
+		#< Weave captures section names >#
+		#< Weave appends section names >#
+		else { print }
+	}
+	1;
+
+=end literate
+
+The section names are gathered either from C<begin> or C<for> commands to be added to the code in the following data paragraph.
+
+=begin literate Weave captures section names
+
+	elsif(/^=begin +literate +\+?(\S.*?)\s*$/) { $title=$1 }
+	elsif(/^=for +literate +\+?(\S.*?)\s*$/)   { $title=$1 }
+
+=end literate
+
+If a section name has been declared and a code line is encountered, the title is appended before the data paragraph
+
+=begin literate Weave appends section names
+
+	elsif($title&&/^(\s*)\S/) { print "$1< $title >=\n$_"; undef($title) }
+
+=end literate
+
+Any target commands can be removed.
+
+=begin literate Weave ignores target commands
+
+	elsif(/^=for +literate:command +target=/)  { 1 }
+	elsif(/^=for +literate +target:/)          { 1 } # deprecated
+
+=end literate
+
+The ending indicates can both be removed, since the end of the associated code sections currently clearly identify the end of the data paragraphs.
+
+=begin literate Weave ignores ending commands
+
+	elsif(/^=end +literate/)                   { undef($title) }
+	elsif(/^=for +literate +\.\s*$/)           { undef($title) }
+
+=end literate
+
+=head2 Common functionality
+
+Basic Perl scripts all start the same way
+
+=for literate Perl script header
+
+	#!/usr/bin/perl
+	use strict;
+	use warnings;
+
+=for literate .
+
 =head1 TODO
 
 The following are being considered.  No particular priority order here.
@@ -653,9 +751,9 @@ The names are clear within the specification, but the generated POD doesn't cont
 
 Documents may appear in sections, and one large POD can become difficult to manage.  With a specialized weave command, it would be sensible to support imports.
 
-=item todo Handle multiple output filenames
+=item done Handle multiple output filenames
 
-The C<target=filename> can simmply set the output and all subsequent sections will be collected therein.  If another filename is encountered, the scanner will start putting sections there.  With an C<import> statement, the filenames would be fairly well scoped, and perhaps C<import> should explicitly scope any set filename.
+The C<target=filename> may be called multiple times to specify separate output filenames.  Each target must have a section with a matching name.  During tangling, the sections are written in turn.
 
 =item done First line indentation is removed, to match indentation at the point of reference
 

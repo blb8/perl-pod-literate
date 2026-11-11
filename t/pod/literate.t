@@ -61,13 +61,14 @@ subtest 'indentation'=>sub {
 };
 
 subtest 'Tangling'=>sub {
-	plan tests=>1;
-	my ($tfh,$tfn)=tempfile(undef,UNLINK => 1);
-	close($tfh);
+	plan tests=>2;
+	my ($tfha,$tfna)=tempfile(undef,UNLINK => 1);
+	my ($tfhb,$tfnb)=tempfile(undef,UNLINK => 1);
+	close($tfha); close($tfhb);
 	my $doc=qq|
 =pod
 
-=for literate:command target=$tfn
+=for literate:command target=$tfna
 
 Some text.
 
@@ -84,7 +85,7 @@ Some text.
 
 =for literate .
 
-=begin literate $tfn
+=begin literate $tfna
 
 	#< Header >#
 	#< Inline conditional >#
@@ -108,6 +109,19 @@ This will be true fifty percent of the time.
 
 =end literate
 
+=head1 Second target
+
+=for literate:command target=$tfnb
+
+=begin literate $tfnb
+
+	#!/usr/bin/perl
+	use strict; use warnings;
+	print "Second output!\\n";
+	#< Say something in2resting >#
+
+=end literate
+
 =cut
 |;
 	#
@@ -117,12 +131,19 @@ This will be true fifty percent of the time.
 	$literate->parse_string_document($doc);
 	#
 	my $result;
-	{ open(my $fh,'<',$tfn); local($/); $result=<$fh>; close($fh); }
+	{ open(my $fh,'<',$tfna); local($/); $result=<$fh>; close($fh); }
 	is($result,
 q|#!/usr/bin/perl
 use strict; use warnings;
 if(rand()>0.5) { print "Greetings!\n" }
 print "Hello world!\n";|,'Generated script');
+	#
+	{ open(my $fh,'<',$tfnb); local($/); $result=<$fh>; close($fh); }
+	is($result,
+q|#!/usr/bin/perl
+use strict; use warnings;
+print "Second output!\n";
+print "Hello world!\n";|,'Generated second script');
 };
 
 subtest 'invalid declarations'=>sub {

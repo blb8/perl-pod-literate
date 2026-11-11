@@ -1,5 +1,8 @@
 Revision history for Pod::Literate
 
+0.0.4 - 2026-..-..
+	- Multiple output target support
+
 0.0.3 - 2026-11-11
 	- Switch to literate:command target=filename
 	- Verify inline references

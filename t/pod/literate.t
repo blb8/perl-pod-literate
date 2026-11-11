@@ -67,7 +67,7 @@ subtest 'Tangling'=>sub {
 	my $doc=qq|
 =pod
 
-=for literate target:$tfn
+=for literate:command target=$tfn
 
 Some text.
 
@@ -112,7 +112,7 @@ This will be true fifty percent of the time.
 |;
 	#
 	my $literate=Pod::Literate->new();
-	$literate->accept_targets('literate');
+	$literate->accept_targets('literate','literate:command');
 	$literate->expand_verbatim_tabs(0);
 	$literate->parse_string_document($doc);
 	#

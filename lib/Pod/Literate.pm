@@ -75,14 +75,15 @@ sub _handle_element_start {
 	my ($self,$element,$attribute)=@_;
 	my $target=$$attribute{target}//'';
 	if($target eq ':literate') { die 'Non-data paragraphs are not currently supported via ":literate"' }
-	if($target ne 'literate') { return }
+	if($target!~/^literate(?::command)?$/) { return }
 	if(my $name=$self->target()) {
 		$self->sectionAppend($name, $self->collected());
 		$self->clearCollection()->initCollection();
 		return;
 	}
 	if($element eq 'for') {
-		$$self{$cache}{mode}=$$attribute{'~really'};
+		if($target eq 'literate:command') { $$self{$cache}{mode}='command' }
+		else { $$self{$cache}{mode}=$$attribute{'~really'} }
 		if($$attribute{title}) { my $s=$$attribute{title}; $s=~s/^\+//; $self->targetSet($s) }
 		$self->initCollection();
 	}
@@ -93,7 +94,12 @@ sub _handle_element_end {
 	if($element eq 'for') {
 		my ($mode,$collected)=@{$$self{$cache}}{qw/mode collector/};
 		$collected=~s/\n$//s;
-		if(($mode eq '=for')&&($collected=~/^target:(.+)$/)) {
+		if(($mode eq 'command')&&($collected=~/^target=(.+)$/)) {
+			$$self{$cache}{ofn}=$1;
+			$self->clearCollection();
+		}
+		elsif(($mode eq '=for')&&($collected=~/^target:(.+)$/)) {
+			print STDERR "=for literate target: is deprecated; use =for literate:command\n";
 			$$self{$cache}{ofn}=$1;
 			$self->clearCollection();
 		}
@@ -290,9 +296,11 @@ Leading and trailing spaces are ignored, but otherwise only the sequence C<E<gt>
 
 At this time, a single output file is supported per specification:
 
-  =for literate target:Module.pm
+  =for literate:command target=Module.pm
 
 Relative and full path specifications are permitted.  (Expect this to support multiple file output in the future).
+
+The previous syntax will be deprecated:  C<=for literate target:Module.pm>
 
 =head1 TODO
 
@@ -315,7 +323,7 @@ Documents may appear in sections, and one large POD can become difficult to mana
 
 =item todo Handle multiple output filenames
 
-The C<target:filename> can simmply set the output and all subsequent sections will be collected therein.  If another filename is encountered, the scanner will start putting sections there.  With an C<import> statement, the filenames would be fairly well scoped, and perhaps C<import> should explicitly scope any set filename.
+The C<target=filename> can simmply set the output and all subsequent sections will be collected therein.  If another filename is encountered, the scanner will start putting sections there.  With an C<import> statement, the filenames would be fairly well scoped, and perhaps C<import> should explicitly scope any set filename.
 
 =item done First line indentation is removed, to match indentation at the point of reference
 

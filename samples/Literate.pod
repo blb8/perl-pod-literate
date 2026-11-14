@@ -114,7 +114,7 @@ The C<for> paragraph behaves slightly differently from begin/end.  In the case o
 
 
 	< Set target from for >=
-	my $s=$collected; $s=~s/^\+//;
+	my $s=$collected; $s=~s/^\+//; $s=~s/\n$//s;
 	$self->targetSet($s);
 	$self->initCollection();
 
@@ -131,7 +131,7 @@ Leading and trailing spaces are ignored, but otherwise only the sequence C<E<gt>
 	< The section name regexp >=
 	my $tagL='#<';
 	my $tagR='>#';
-	my $reSection=qr/$tagL\s*(.+?)\s*$tagR/;
+	my $reSection=qr/$tagL\h*(.+?)\h*$tagR/;
 
 
 =head1 TANGLE
@@ -160,10 +160,10 @@ Building a single section requires replacing the section name references with th
 		my $section=$$self{$cache}{section}{$name};
 		foreach my $import (keys %{$$self{$cache}{dep}{$name}}) {
 			my $re=sectionRegexp($import);
-			my $code=$$self{$cache}{section}{$import}; $code=~s/\n+$//s;
-			while($section=~/^(\s*)$re\s*$/m) {
+			my $code=$$self{$cache}{section}{$import}; $code=~s/\n$//s;
+			while($section=~/^(\h*)$re\h*$/m) {
 				my $icode=indent($code,$1);
-				$section=~s/^\s*$re\s*$/$icode/em;
+				$section=~s/^\h*$re\h*$/$icode/em;
 			}
 			$section=~s/$re/$code/ge;
 		}
@@ -288,13 +288,16 @@ The C<perlpod> format is provided in a basic module, C<Pod::Literate>:
 	#< Literate Version >#
 	use strict;
 	use warnings;
+
 	#< Name the cache          >#
 	#< The section name regexp >#
+
 	#< Constructor             >#
 	#< Accessors and Setters   >#
 	#< POD Handlers            >#
 	#< Tangle Methods          >#
 	1;
+
 	__END__
 
 
@@ -316,7 +319,6 @@ A subclass of L<Pod::Simple> must implement handlers for the start and end of co
 		my ($self,$element,$attribute)=@_;
 		if($element eq 'for') {
 			my ($mode,$collected)=@{$$self{$cache}}{qw/mode collector/};
-			$collected=~s/\n$//s;
 			#< Handle tangle target  >#
 			#< Handle an end element >#
 		}
@@ -348,7 +350,7 @@ After the period is grabbed, the end event will need to clear the collector.
 
 
 	< Handle an end element >=
-	elsif(($mode eq '=for')&&($collected eq '.')) {
+	elsif(($mode eq '=for')&&($collected eq ".\n")) {
 		$self->clearCollection();
 	}
 
@@ -508,7 +510,7 @@ Also during tangle operations, it is important to exactly match section referenc
 	< A regular expression for a specific section >=
 	sub sectionRegexp {
 		my ($name)=@_;
-		return qr/$tagL\s*\Q$name\E\s*$tagR/;
+		return qr/$tagL\h*\Q$name\E\h*$tagR/;
 	}
 
 
@@ -537,7 +539,7 @@ Text is collected in an instance variable
 	}
 
 
-The collected text can be retrieved in a form suitable for inclusion in a section reference.
+The collected text can be retrieved in a form suitable for inclusion in a section reference.  Notice that each collected data paragraph necessarily contains a blank line prior to the C<=end> or C<=for literate .> command, but that extra newline is only removed during tangling.
 
 
 	< A method to format collected text >=
@@ -566,7 +568,7 @@ The first line of a section defines the indent level.
 	< A method to remove leading indents >=
 	sub unindent {
 		my ($s)=@_;
-		if($s=~/^(\s+)/) {
+		if($s=~/^(\h+)/) {
 			my $indent=$1;
 			$s=~s/^\Q$indent\E//mg;
 		}
@@ -607,7 +609,6 @@ A straightforward script provides for parsing files containing C<literate> forma
 	use Pod::Literate;
 	## No options at this time
 	#< Tangle from file >#
-	1;
 
 
 As L<Pod::Literate> extends L<Pod::Simple>, it is straightforward to declare acceptable format names and pass to the existing file parser.
@@ -637,22 +638,21 @@ A more complex C<weave> command may be provided in the future.  At this time, ho
 		#< Weave appends section names >#
 		else { print }
 	}
-	1;
 
 
 The section names are gathered either from C<begin> or C<for> commands to be added to the code in the following data paragraph.
 
 
 	< Weave captures section names >=
-	elsif(/^=begin +literate +\+?(\S.*?)\s*$/) { $title=$1 }
-	elsif(/^=for +literate +\+?(\S.*?)\s*$/)   { $title=$1 }
+	elsif(/^=begin\h+literate\h+\+?(\H.*?)\h*$/) { $title=$1 }
+	elsif(/^=for\h+literate\h+\+?(\H.*?)\h*$/)   { $title=$1 }
 
 
 If a section name has been declared and a code line is encountered, the title is appended before the data paragraph
 
 
 	< Weave appends section names >=
-	elsif($title&&/^(\s*)\S/) { print "$1< $title >=\n$_"; undef($title) }
+	elsif($title&&/^(\h*)\S/) { print "$1< $title >=\n$_"; undef($title) }
 
 
 Any target commands can be removed.
@@ -667,8 +667,8 @@ The ending indicates can both be removed, since the end of the associated code s
 
 
 	< Weave ignores ending commands >=
-	elsif(/^=end +literate/)                   { undef($title) }
-	elsif(/^=for +literate +\.\s*$/)           { undef($title) }
+	elsif(/^=end\h+literate/)                   { undef($title) }
+	elsif(/^=for\h+literate\h+\.\h*$/)          { undef($title) }
 
 
 =head2 Common functionality

@@ -3,10 +3,12 @@ use parent 'Pod::Simple';
 our $VERSION='0.0.3';
 use strict;
 use warnings;
+
 my $cache='--PODLITERATECACHE--';
 my $tagL='#<';
 my $tagR='>#';
-my $reSection=qr/$tagL\s*(.+?)\s*$tagR/;
+my $reSection=qr/$tagL\h*(.+?)\h*$tagR/;
+
 sub new {
 	my ($class)=@_;
 	my $self=$class->SUPER::new();
@@ -22,55 +24,66 @@ sub new {
 	};
 	return $self;
 }
+
 sub targetSet {
 	my ($self,$name)=@_;
 	$$self{$cache}{target}=$name;
 	return $self;
 }
+
 sub target {
 	my ($self)=@_;
 	return $$self{$cache}{target};
 }
+
 sub sectionAppend {
 	my ($self,$section,$text)=@_;
 	$$self{$cache}{section}{$section}.=$text;
 }
+
 sub section {
 	my ($self,$section)=@_;
 	return $$self{$cache}{section}{$section};
 }
+
 sub sectionRegexp {
 	my ($name)=@_;
-	return qr/$tagL\s*\Q$name\E\s*$tagR/;
+	return qr/$tagL\h*\Q$name\E\h*$tagR/;
 }
+
 sub initCollection {
 	my ($self,$text)=@_;
 	$$self{$cache}{collector}=$text//'';
 	return $self;
 }
+
 sub collected {
 	my ($self)=@_;
 	return unindent($$self{$cache}{collector});
 }
+
 sub clearCollection {
 	my ($self)=@_;
 	delete(@{$$self{$cache}}{qw/target collector/});
 	return $self;
 }
+
 sub unindent {
 	my ($s)=@_;
-	if($s=~/^(\s+)/) {
+	if($s=~/^(\h+)/) {
 		my $indent=$1;
 		$s=~s/^\Q$indent\E//mg;
 	}
 	return $s;
 }
+
 sub indent {
 	my ($code,$indent)=@_;
 	if(!$indent) { return $code }
 	$code=~s/^/$indent/emg;
 	return $code;
 }
+
 sub _handle_element_start {
 	my ($self,$element,$attribute)=@_;
 	my $target=$$attribute{target}//'';
@@ -93,7 +106,6 @@ sub _handle_element_end {
 	my ($self,$element,$attribute)=@_;
 	if($element eq 'for') {
 		my ($mode,$collected)=@{$$self{$cache}}{qw/mode collector/};
-		$collected=~s/\n$//s;
 		if(($mode eq 'command')&&($collected=~/^target=(.+)$/)) {
 			push @{$$self{$cache}{ofn}},$1;
 			$self->clearCollection();
@@ -103,11 +115,11 @@ sub _handle_element_end {
 			push @{$$self{$cache}{ofn}},$1;
 			$self->clearCollection();
 		}
-		elsif(($mode eq '=for')&&($collected eq '.')) {
+		elsif(($mode eq '=for')&&($collected eq ".\n")) {
 			$self->clearCollection();
 		}
 		elsif($mode eq '=for') {
-			my $s=$collected; $s=~s/^\+//;
+			my $s=$collected; $s=~s/^\+//; $s=~s/\n$//s;
 			$self->targetSet($s);
 			$self->initCollection();
 		}
@@ -125,6 +137,7 @@ sub _handle_text {
 	my ($self,$text)=@_;
 	if(defined($$self{$cache}{collector})) { $$self{$cache}{collector}.=$text."\n" }
 }
+
 sub tangle {
 	my ($self)=@_;
 	my (%tobuild,@todo); # prebuild to keep the loops separate
@@ -144,26 +157,29 @@ sub tangle {
 	} }
 	return $self;
 }
+
 sub tangleSection {
 	my ($self,$name)=@_;
 	my $section=$$self{$cache}{section}{$name};
 	foreach my $import (keys %{$$self{$cache}{dep}{$name}}) {
 		my $re=sectionRegexp($import);
-		my $code=$$self{$cache}{section}{$import}; $code=~s/\n+$//s;
-		while($section=~/^(\s*)$re\s*$/m) {
+		my $code=$$self{$cache}{section}{$import}; $code=~s/\n$//s;
+		while($section=~/^(\h*)$re\h*$/m) {
 			my $icode=indent($code,$1);
-			$section=~s/^\s*$re\s*$/$icode/em;
+			$section=~s/^\h*$re\h*$/$icode/em;
 		}
 		$section=~s/$re/$code/ge;
 	}
 	$$self{$cache}{section}{$name}=$section;
 }
+
 sub codeSectionNames {
 	my ($code)=@_;
 	my %names;
 	while($code=~m/$reSection/g) { $names{$1}=1 }
 	return keys(%names);
 }
+
 sub prepareSections {
 	my ($self)=@_;
 	my ($changed,$sections,%dep,%missing,%cyclic)=(1);
@@ -190,6 +206,7 @@ sub prepareSections {
 	$$self{$cache}{dep}=\%dep;
 	return $self;
 }
+
 1;
 
 __END__
@@ -224,6 +241,10 @@ I<IMPORTANT>:  This is an early version.  Monitor the version change logs for ad
 
 =over
 
+=item Spacing behaviors
+
+Spacing behaviors of C<=begin> and C<=for> have been fixed/established in 0.0.4!
+
 =item Section declaration versus addition
 
 The warning/error behavior of C<literate Name> versus C<literate +Name> may change, be dependent on commandline flags, etc.
@@ -240,11 +261,11 @@ Weave options and overall behaviors are subject to change.
 
 =head1 FORMAT FEATURES
 
-The module, C<Pod::Literate>, is implemented using the formatting features of L<perlpod>.  At this time, either C<=begin> or C<=for> may be used to declare I<named sections> of code.  They behave different within L<perlpod>, where the C<=begin> paragraphs will be hidden, but both declarations are visible with the current I<weave> command.
+The module, C<Pod::Literate>, is implemented using the formatting features of L<perlpod>.  At this time, either C<=begin> or C<=for> may be used to declare I<named sections> of code.  They have different end-of-line behaviors.  Both declarations are visible when using the I<weave> command, but C<perlpod> will hide the C<=begin> sections if C<weave> is not used first.
 
 =head2 begin and end
 
-The begin and end command paragraphs are used to create sections that are I<hidden> in perlpod (but still visible during a weave operation), and must appear in pairs:
+The begin and end command paragraphs are used to create named sections of code, and must appear in pairs:
 
 	=begin literate Descriptive name
 
@@ -252,7 +273,7 @@ The begin and end command paragraphs are used to create sections that are I<hidd
 
 	=end literate
 
-When processing the start of these blocks, a title attribute is set with the "Descriptive name" which is used to identify the target section into which the text contents will be stored.
+When processing the start of these blocks, a title attribute is set with the "Descriptive name" which is used to identify the target section into which the text contents will be stored.  The C<begin/end> is best suited for code blocks, such as complete subroutines or functions, because the final blank line before the C<=end> I<will> be included in the code.  These sections will be hidden with plain C<perlpod>, but are visible when using C<weave>.
 
 Notice, I<at this time>, that the classic additive syntax for a named section is supported, in particular
 
@@ -266,7 +287,8 @@ but this is equivalent to the non-additive name.  In particular, if sections app
 
 =head2 for
 
-The C<=for> command paragraph denotes sections that are I<not hidden> in L<perlpod>, nor during a weave operation.  The ending of a C<for> section uses a period:
+The C<=for> command paragraph may also be used to create named sections of code, and must appear paired with and ending C<for> statement:
+
 
 	=for literate Descriptive name
 
@@ -274,7 +296,9 @@ The C<=for> command paragraph denotes sections that are I<not hidden> in L<perlp
 
 	=for literate .
 
-At this time the period is mandatory and signals the end of content collection.
+The stand-alone period is mandatory to signal the end of content collection.  The target section is still identified by the "Descriptive name".  The C<for/for> is best suited for referenced lines of code, one or multiple lines, because the final blank line before the ending C<=for> I<will not> be included in the code.  These sections will be visible with plain C<perlpod>, and are visible when using C<weave>.
+
+The additive syntax also works for sections created with C<=for>.
 
 =head2 Section names
 
@@ -283,6 +307,99 @@ Sections named in C<=begin> and C<=for> tags are limited only by L<perlpod> func
 	#< Descriptive name >#
 
 Leading and trailing spaces are ignored, but otherwise only the sequence C<E<gt>#> would be illegal in a name.
+
+=head2 Vertical Spacing
+
+The behavior of single and concatenated begin and for blocks differs with regards to blank lines.  Blank lines appear
+
+
+  when               after each reference    between concatenations
+  using begin/end    yes                     yes
+  using for/for      no                      no
+
+Consider this example:
+
+  =begin literate subs
+
+    sub AAA {
+      #< for lines >#
+    }
+
+  =end literate
+
+  =begin literate subs
+
+    sub BBB {
+      #< for lines >#
+    }
+
+  =end literate
+
+  =for literate for lines
+
+    # comment 1
+
+  =for literate .
+
+  =for literate for lines
+
+    # comment 2
+
+  =for literate .
+
+The result of C<tangle> will be:
+
+  sub AAA {
+    # comment 1
+    # comment 2
+  }
+    (blank line here)
+  sub BBB {
+    # comment 1
+    # comment 2
+  }
+    (blank line here)
+
+For greater control, defined C<#E<lt> blank E<gt>#> and place it as needed.
+
+=head2 Horizontal Spacing
+
+References are included verbatim where they appear, so begin/end blocks are typically not appropriate in the middle of lines.  Consider
+
+  =begin literate example
+
+    if(#< begin inline >#) { #< for inline ># }
+
+  =end literate
+
+  =begin literate begin inline
+
+    begin line
+
+  =end literate
+
+  =for literate for inline
+
+    for line
+
+  =for literate .
+
+The result of C<tangle> will be:
+
+  if(begin line
+  ) { for line }
+
+Note that C<#E<lt> for inline E<gt>##E<lt> for inline E<gt>#> will yield two references I<without> an inside newline, but multiple, concatenated declarations of C<=for literate> will still have a blank line between each.
+
+This permits declarations such as
+
+  =for literate header
+
+    =head
+
+  =for literate .
+
+to be used in cases such as C<#E<lt>headerE<gt>#1  Title>.
 
 =head1 OUTPUT
 
@@ -325,7 +442,7 @@ Multiple C<target=filename> calls can be made.
 
 =item done Inline references
 
-A reference within a line is handled correctly.  C<if(#E<lt> ref E<gt>#)> expands properly if C<ref> is a single line, with no additional spaces.  If ref is a multiline, it's still inserted at that spot, with its inner newlines, but with no terminal newline.
+References within lines are expanded normally, with no terminal newline changes.
 
 =item todo Inline declaration
 
@@ -339,7 +456,9 @@ These are now explicitly rejected.  These are meant to denote plain/POD paragrap
 
 =item todo Blank code lines
 
-Blank lines before/after subroutines, for example, are not straightforward to specify.  Inside C<=for> blocks, those would violate L<podchecker> which expects no whitespace-only lines.  It may be this is entirely the responsibility of a later style tool, but it should be possible to get actual blank lines without having to put those blank lines around the reference.  Maybe some C<#nl> or equivalent, which would still look nicer than some lengthy C<# blank line #> type of comment.
+Blank lines after subroutines have improved with updates to C<=begin>, but there are still cases where it may be worthwhile to support additional filtering instructions during tangling, or when sections are loaded.
+
+This may be entirely the responsibility of a later style tool, but it should be possible to get actual blank lines without having to put those blank lines around the reference.  Maybe some C<#nl> or equivalent, which would still look nicer than some lengthy C<# blank line #> type of comment.
 
 Another approach would be, since this is Perl POD, to permit enabling spaces around balanced blocks that are denoted, such as C<sub>.
 
@@ -349,7 +468,7 @@ Lexicographic index of all section names etc.  (Page numbers seem irrelevant, is
 
 =item todo Module pod
 
-How to denote pod that belongs with the output module?  This may be supported via the C<:literate> format identifier.
+(This is possible/solved but not yet documented).  How to denote pod that belongs with the output module?
 
 =item todo Tests
 

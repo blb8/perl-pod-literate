@@ -70,6 +70,8 @@ subtest 'Tangling'=>sub {
 
 =for literate:command target=$tfna
 
+=head1 First target
+
 Some text.
 
 =begin literate Header
@@ -90,6 +92,11 @@ Some text.
 	#< Header >#
 	#< Inline conditional >#
 	#< Say something in2resting >#
+	# test blank lines begin
+	#< Test Blank Lines begin >#
+	# test blank lines for
+	#< Test Blank Lines for >#
+	# test blank lines end
 
 =end literate
 
@@ -103,24 +110,52 @@ The conditional will check inline behavior.
 
 This will be true fifty percent of the time.
 
-=begin literate Fifty percent chance
+=for literate Fifty percent chance
 
 	rand()>0.5
 
+=for literate .
+
+=head2 Testing blank line behavior
+
+The goal here is to show that begin/for has slightly different behavior with terminal newline handling.
+
+=begin literate Test Blank Lines begin
+
+	# first
+
 =end literate
+
+=begin literate Test Blank Lines begin
+
+	# second
+
+=end literate
+
+=for literate Test Blank Lines for
+
+	# first
+
+=for literate .
+
+=for literate Test Blank Lines for
+
+	# second
+
+=for literate .
 
 =head1 Second target
 
 =for literate:command target=$tfnb
 
-=begin literate $tfnb
+=for literate $tfnb
 
 	#!/usr/bin/perl
 	use strict; use warnings;
 	print "Second output!\\n";
 	#< Say something in2resting >#
 
-=end literate
+=for literate .
 
 =cut
 |;
@@ -135,15 +170,28 @@ This will be true fifty percent of the time.
 	is($result,
 q|#!/usr/bin/perl
 use strict; use warnings;
+
 if(rand()>0.5) { print "Greetings!\n" }
-print "Hello world!\n";|,'Generated script');
+print "Hello world!\n";
+# test blank lines begin
+# first
+
+# second
+
+# test blank lines for
+# first
+# second
+# test blank lines end
+
+|,'Generated script');
 	#
 	{ open(my $fh,'<',$tfnb); local($/); $result=<$fh>; close($fh); }
 	is($result,
 q|#!/usr/bin/perl
 use strict; use warnings;
 print "Second output!\n";
-print "Hello world!\n";|,'Generated second script');
+print "Hello world!\n";
+|,'Generated second script');
 };
 
 subtest 'invalid declarations'=>sub {
